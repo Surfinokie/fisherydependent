@@ -95,7 +95,7 @@ process_spp <- function(processing_frame, threshold){
     #print(intermed_result_frame)
     
     result <- rbind(result, intermed_result_frame)
-    print(result)
+    #print(result)
   }
   
   #If the last row is < the threshold, add it to the preceding row, and remove the last
@@ -105,6 +105,7 @@ process_spp <- function(processing_frame, threshold){
     result <- result %>% filter(!row_number() %in% nrow(result))
   }  
   
+  #print(result)
   #return the result frame
   result
 }
@@ -115,9 +116,21 @@ if(length(distinct_spp) > 0){
     #i == the species_cd
     #call the function
     the_frame <- spp_extractor(i)
-    final_result <- union_all(final_result, process_spp(the_frame, 25))
-    #print(i)
+    if(which(distinct_spp == i) > 1){
+      final_result <- union_all(final_result, process_spp(the_frame, 25))
+    }
+    else {
+      final_result <- process_spp(the_frame, 25)
+    }
   }
+  
+  #Make things prettier
+  colnames(final_result) <- c("species_cd", "pres", "obs", "min_dc", "max_dc")
+  
+  #Add a final midpoint column that is the mid between min_dc and max_dc
+  final_result <-
+    final_result %>%
+    mutate(midpoint = (min_dc + max_dc)/2)
 } #what to do if not true?
 
 
