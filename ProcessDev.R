@@ -1,12 +1,14 @@
 #David Graham 3/26/25
-#pre-function and pre-package version, this is the PoC playground.
 #R version 4.4.3
 #Tidyverse 2.0.0 (dplyr 1.1.4)
 library(tidyverse)
 #library(plyr)
 
 #Read in the data
-#baseframe <- read.csv("pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
+#windows
+#baseframe <- read.csv("c:\\work\\R\\BinGenerator\\Data\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
+#mac
+baseframe <- read.csv("../pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
 
 #baseframe
 #summary(baseframe)
@@ -23,13 +25,36 @@ ana_frame <- ana_frame %>% mutate(species_cd = str_replace_all(species_cd, " ", 
 ana_frame <- ana_frame %>%
   add_column("dc_min"=0, "dc_max"=0, "dc_midpoint"=0)
 
+#Don't really need to do this, instead get distinct spp from ana_frame and loop through that
+#mtcars %>% distinct(cyl) %>% pull()
 #split ana_frame into component data frames by species
-list_of_df <- split(ana_frame, ana_frame$species_cd)
+#list_of_df <- split(ana_frame, ana_frame$species_cd)
+#vector of spp codes
+distinct_spp <- ana_frame %>% distinct(species_cd) %>% pull()
 
-the_frame <- list_of_df$'ACA__COER' %>%
+the_frame <- data.frame()
+#get all rows with the species code and create a new summarised df on which to operate
+spp_extractor <- function(spp_code){
+  ana_frame[ana_frame$species_cd == spp_code,]
+  #the_frame <- filter(ana_frame, species_cd == "STE__PART") 
+  #print(spp_code)
+  #%>%
+  #the_frame <- list_of_df$'SPA__CHRY' %>%
   #the_frame <- list_of_df %>%
-  group_by(species_cd, dc) %>%
-  summarise(n=n(), obs=max(pres))
+  #group_by(species_cd, dc) %>%
+  #  summarise(n=n(), obs=max(pres))
+}
+
+#for each element in distinct_spp call the function that does all the work and add the result to the final result df
+if(length(distinct_spp) > 0){
+  for(i in distinct_spp){
+    #i == the species_cd
+    #call the function
+    the_frame <- spp_extractor(i)
+    #print(i)
+  }
+} #what to do if not true?
+
 
 #print(the_frame, n=100)
 
@@ -111,9 +136,9 @@ result <-
 
 #have to have at least 1 positive and 1 negative observation for logistic
 #iterate subsequent bins until true
-function <- AdjustForLogistic(){
-  
-}
+#function <- AdjustForLogistic(){
+
+#}
 
 
 
@@ -134,6 +159,7 @@ rm(list_of_df.balcapr)
 rm(something)
 ls()
 rm(list=ls())
+rm(the_frame)
 
 
 
