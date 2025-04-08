@@ -28,6 +28,8 @@ ana_frame <- ana_frame %>%
 #vector of spp codes
 distinct_spp <- ana_frame %>% distinct(species_cd) %>% pull()
 
+result <- data.frame()
+final_result <- data.frame()
 the_frame <- data.frame()
 #get all rows with the species code and create a new summarised df on which to operate
 spp_extractor <- function(spp_code){
@@ -36,12 +38,84 @@ spp_extractor <- function(spp_code){
     summarise(n=n(), obs=max(pres))
 }
 
+process_spp <- function(processing_frame, threshold){
+  #print(processing_frame)
+  i <- 1
+  while (i <= nrow(processing_frame)){
+    current_sum <- 0
+    rows_to_add <- list()
+    vObs <- vector()
+    vSppCd <- vector()
+    vDc <- vector()
+    vObsThis <- vector()
+    vObsPres <- vector()
+    
+    while (current_sum < threshold && i <= nrow(processing_frame)) {
+      current_sum <- current_sum + sum(processing_frame[i,c("n")])
+      
+      vObs <- append(vObs, current_sum)
+      vSppCd <- append(vSppCd, processing_frame[i,1])
+      vDc <- append(vDc, processing_frame[i,2])
+      vObsThis <- append(vObsThis, processing_frame[i,3])
+      vObsPres <- append(vObsPres, processing_frame[i,4])
+      
+      #debug code
+      #print(vObs)
+      #print(vSppCd)
+      
+      result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vDc)), max(unlist(vDc)), max(unlist(vObsPres)))
+      
+      #debug code
+      #print(result_frame)
+      #if(result_frame[1,3] == result_frame[1,4]){
+      #  print("true")
+      
+      #set the current row's max_dc to the next row's min_dc
+      if(!is.na(processing_frame[i+1, 2]))
+      {
+        result_frame[1,4] = processing_frame[i+1,2]
+      } else 
+      {
+        result_frame[1,4] = processing_frame[i,2]
+      }
+      
+      #debug code
+      #print(result_frame)
+      
+      rows_to_add <- append(rows_to_add, result_frame)
+      i <- i + 1
+    }
+    
+    #debug code  
+    #print(result_frame)
+    
+    intermed_result_frame <- data.frame(result_frame[1,1], max(result_frame[5]), max(result_frame[2]), min(result_frame[3]), max(result_frame[4]))
+    
+    #debug code
+    #print(intermed_result_frame)
+    
+    result <- rbind(result, intermed_result_frame)
+    print(result)
+  }
+  
+  #If the last row is < the threshold, add it to the preceding row, and remove the last
+  if(nrow(result) > 1 && result[nrow(result), 3] < threshold){
+    result[nrow(result)-1, 3] <- result[nrow(result)-1, 3] + result[nrow(result), 3]
+    result[nrow(result)-1, 5] <- result[nrow(result), 5]
+    result <- result %>% filter(!row_number() %in% nrow(result))
+  }  
+  
+  #return the result frame
+  result
+}
+
 #for each element in distinct_spp call the function that does all the work and add the result to the final result df
 if(length(distinct_spp) > 0){
   for(i in distinct_spp){
     #i == the species_cd
     #call the function
     the_frame <- spp_extractor(i)
+    final_result <- union_all(final_result, process_spp(the_frame, 25))
     #print(i)
   }
 } #what to do if not true?
