@@ -35,35 +35,43 @@ the_frame <- data.frame()
 spp_extractor <- function(spp_code){
   filter(ana_frame, species_cd == spp_code) %>%
     group_by(species_cd, dc) %>%
-    summarise(n=n(), obs=max(pres))
+    summarise(n=n(), 
+              obs=max(pres), 
+              pres_true = sum(ifelse(pres==1, 1, 0)), 
+              pres_false = sum(ifelse(pres==0, 1, 0)))
 }
 
 process_spp <- function(processing_frame, threshold){
-  #print(processing_frame)
   i <- 1
   while (i <= nrow(processing_frame)){
     current_sum <- 0
+    #number of present observations for logistic
+    pos_sum <- 0
+    #number of not-present observations for logistic
+    neg_sum <- 0
     rows_to_add <- list()
     vObs <- vector()
+    vPos <- vector()
+    vNeg <- vector()
     vSppCd <- vector()
     vDc <- vector()
-    vObsThis <- vector()
-    vObsPres <- vector()
     
     while (current_sum < threshold && i <= nrow(processing_frame)) {
       current_sum <- current_sum + sum(processing_frame[i,c("n")])
+      pos_sum <- pos_sum + sum(processing_frame[i, c("pres_true")])
+      neg_sum <- neg_sum + sum(processing_frame[i, c("pres_false")])
       
       vObs <- append(vObs, current_sum)
+      vPos <- append(vPos, pos_sum)
+      vNeg <- append(vNeg, neg_sum)
       vSppCd <- append(vSppCd, processing_frame[i,1])
       vDc <- append(vDc, processing_frame[i,2])
-      vObsThis <- append(vObsThis, processing_frame[i,3])
-      vObsPres <- append(vObsPres, processing_frame[i,4])
       
       #debug code
       #print(vObs)
       #print(vSppCd)
       
-      result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vDc)), max(unlist(vDc)), max(unlist(vObsPres)))
+      result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vDc)), max(unlist(vDc)), vPos, vNeg)
       
       #debug code
       #print(result_frame)
@@ -83,13 +91,17 @@ process_spp <- function(processing_frame, threshold){
       #print(result_frame)
       
       rows_to_add <- append(rows_to_add, result_frame)
+      #print(rows_to_add)
       i <- i + 1
     }
     
     #debug code  
+    #print("result")
     #print(result_frame)
+    #print("end result")
     
-    intermed_result_frame <- data.frame(result_frame[1,1], max(result_frame[5]), max(result_frame[2]), min(result_frame[3]), max(result_frame[4]))
+    colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    intermed_result_frame <- result_frame %>% group_by(species_cd) %>% summarise(max(obs), min(min_dc), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
     
     #debug code
     #print(intermed_result_frame)
@@ -99,11 +111,14 @@ process_spp <- function(processing_frame, threshold){
   }
   
   #If the last row is < the threshold, add it to the preceding row, and remove the last
-  if(nrow(result) > 1 && result[nrow(result), 3] < threshold){
-    result[nrow(result)-1, 3] <- result[nrow(result)-1, 3] + result[nrow(result), 3]
-    result[nrow(result)-1, 5] <- result[nrow(result), 5]
+  if(nrow(result) > 1 && result[nrow(result), 2] < threshold){
+    result[nrow(result)-1, 2] <- result[nrow(result)-1, 2] + result[nrow(result), 2]
+    result[nrow(result)-1, 4] <- result[nrow(result), 4]
+    result[nrow(result)-1, 5] <- result[nrow(result)-1, 5] + result[nrow(result), 5]
+    result[nrow(result)-1, 6] <- result[nrow(result)-1, 6] + result[nrow(result), 6]
+
     result <- result %>% filter(!row_number() %in% nrow(result))
-  }  
+  }
   
   #print(result)
   #return the result frame
@@ -125,7 +140,7 @@ if(length(distinct_spp) > 0){
   }
   
   #Make things prettier
-  colnames(final_result) <- c("species_cd", "pres", "obs", "min_dc", "max_dc")
+  colnames(final_result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
   
   #Add a final midpoint column that is the mid between min_dc and max_dc
   final_result <-
