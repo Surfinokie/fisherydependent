@@ -57,6 +57,7 @@ process_spp <- function(processing_frame, threshold){
     vDc <- vector()
     
     while (current_sum < threshold && i <= nrow(processing_frame)) {
+      #does this have a first row error and always add the first row to the second?
       current_sum <- current_sum + sum(processing_frame[i,c("n")])
       pos_sum <- pos_sum + sum(processing_frame[i, c("pres_true")])
       neg_sum <- neg_sum + sum(processing_frame[i, c("pres_false")])
@@ -102,11 +103,12 @@ process_spp <- function(processing_frame, threshold){
     
     colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
     intermed_result_frame <- result_frame %>% group_by(species_cd) %>% summarise(max(obs), min(min_dc), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
-    
+    colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
     #debug code
     #print(intermed_result_frame)
     
     result <- rbind(result, intermed_result_frame)
+    #colnames(result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
     #print(result)
   }
   
@@ -123,6 +125,50 @@ process_spp <- function(processing_frame, threshold){
   #print(result)
   #return the result frame
   result
+}
+
+process_logit <- function(processing_frame){
+  if(logit==TRUE){
+    #go through result frame and add subsequent rows until pos_obs and neg_obs both >= 1
+    #do pos_obs first
+    if(nrow(result) > 1){
+      i <- 1
+      
+      while(i < nrow(result)){
+        current_sum <- 0
+        i <- 1
+        vObs <- NULL
+        vPos <- NULL
+        vNeg <- NULL
+        vSppCd <- NULL
+        vMinDc <- NULL
+        vMaxDc <- NULL
+        #print(current_sum)
+        while(current_sum < 1 && i <= nrow(result)){
+          current_sum <- current_sum + result[i,c("pos_obs")]
+          #print(current_sum)
+          print (result[i,5])
+          #pos_sum <- pos_sum + sum(processing_frame[i, c("pres_true")])
+          #neg_sum <- neg_sum + sum(processing_frame[i, c("pres_false")])
+          
+          vObs <- append(vObs, result[i, c("obs")])
+          vPos <- append(vPos, result[i, c("pos_obs")])
+          vNeg <- append(vNeg, result[i, c("neg_obs")])
+          vSppCd <- append(vSppCd, result[i,c("species_cd")])
+          vMinDc <- append(vDc, result[i,c("min_dc")])
+          vMaxDc <- append(vMaxDc, result[i, c("max_dc")])
+          
+          result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vMinDc)), max(unlist(vMaxDc)), vPos, vNeg)
+        }
+        ##print(result_frame)
+        i <- i + 1
+      }
+    }
+    #do neg_obs
+    
+    
+    
+  }
 }
 
 #for each element in distinct_spp call the function that does all the work and add the result to the final result df
