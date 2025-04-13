@@ -128,47 +128,57 @@ process_spp <- function(processing_frame, threshold){
 }
 
 process_logit <- function(processing_frame){
-  if(logit==TRUE){
     #go through result frame and add subsequent rows until pos_obs and neg_obs both >= 1
     #do pos_obs first
-    if(nrow(result) > 1){
+    #print(processing_frame)
+  
+    if(nrow(processing_frame) > 1){
       i <- 1
-      
-      while(i < nrow(result)){
-        current_sum <- 0
-        i <- 1
-        vObs <- NULL
-        vPos <- NULL
-        vNeg <- NULL
-        vSppCd <- NULL
-        vMinDc <- NULL
-        vMaxDc <- NULL
-        #print(current_sum)
-        while(current_sum < 1 && i <= nrow(result)){
-          current_sum <- current_sum + result[i,c("pos_obs")]
-          #print(current_sum)
-          print (result[i,5])
+      #print(i) 
+     #return(processing_frame)
+      #print(nrow(processing_frame))
+      while(i < nrow(processing_frame)){
+         current_sum <- 0
+         #i <- 1
+         vObs <- vector()
+         vPos <- vector()
+         vNeg <- vector()
+         vSppCd <- vector()
+         vMinDc <- vector()
+         vMaxDc <- vector()
+         #print(i)
+    # #     #print(current_sum)
+       while(current_sum < 1 && i <= nrow(processing_frame)){
+         current_sum <- current_sum + min(processing_frame[i,c("pos_obs")])
+    #       #print(current_sum + min(processing_frame[i,c("pos_obs")]))
+    #       print(paste("current_sum:", current_sum, " current_sum<1:", current_sum <1, " i:", i, " nrow:", nrow(processing_frame)))
+    #       #print(current_sum)
+    #       #print(str(current_sum))
+    #       #print(i)
+    # #       print (result[i,5])
           #pos_sum <- pos_sum + sum(processing_frame[i, c("pres_true")])
           #neg_sum <- neg_sum + sum(processing_frame[i, c("pres_false")])
-          
+
           vObs <- append(vObs, result[i, c("obs")])
           vPos <- append(vPos, result[i, c("pos_obs")])
           vNeg <- append(vNeg, result[i, c("neg_obs")])
           vSppCd <- append(vSppCd, result[i,c("species_cd")])
-          vMinDc <- append(vDc, result[i,c("min_dc")])
+          vMinDc <- append(vMinDc, result[i,c("min_dc")])
           vMaxDc <- append(vMaxDc, result[i, c("max_dc")])
           
-          result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vMinDc)), max(unlist(vMaxDc)), vPos, vNeg)
-        }
-        ##print(result_frame)
-        i <- i + 1
+          #result_frame <- data.frame(unlist(vSppCd), unlist(vObs), min(unlist(vMinDc)), max(unlist(vMaxDc)), sum(vPos), sum(vNeg))
+          i<-i+1
+          #print(paste("vObs:", vObs, "i:", i))
+          #print(result[i, c("obs")])
+       }
+         
+        #print(result_frame)
+       #i <- i + 1
       }
+      #print(i)
     }
     #do neg_obs
     
-    
-    
-  }
 }
 
 #for each element in distinct_spp call the function that does all the work and add the result to the final result df
@@ -185,120 +195,38 @@ if(length(distinct_spp) > 0){
     }
   }
   
-  #Make things prettier
   colnames(final_result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
   
+  logit <- TRUE
+  #logistic portion
+  #print(distinct_spp)
+  if(logit == TRUE){
+    if(length(distinct_spp > 0)){
+      for(i in distinct_spp){
+        #print(i)
+        the_frame <-  filter(final_result, species_cd == i)
+        as.data.frame(the_frame)
+        #print(the_frame)
+         if(which(distinct_spp == i) > 1){
+           print("here")
+           #print(the_frame)
+           final_result <- union_all(final_result, process_logit(the_frame))
+        #
+         } else {
+           print("there")
+           #print(the_frame)
+          final_result <- process_logit(the_frame)
+        }
+      }
+    }
+  }
+
+  #print(final_result)
   #Add a final midpoint column that is the mid between min_dc and max_dc
-  final_result <-
-    final_result %>%
-    mutate(midpoint = (min_dc + max_dc)/2)
+  # final_result <-
+  #   final_result %>%
+  #   mutate(midpoint = (min_dc + max_dc)/2)
 } #what to do if not true?
 
 
-#print(the_frame, n=100)
-
-
-#set bin size as threshold
-threshold <- 25
-result <- data.frame()
-i <- 1
-while (i <= nrow(the_frame)){
-  current_sum <- 0
-  rows_to_add <- list()
-  vObs <- vector()
-  vSppCd <- vector()
-  vDc <- vector()
-  vObsThis <- vector()
-  vObsPres <- vector()
-  
-  while (current_sum < threshold && i <= nrow(the_frame)) {
-    current_sum <- current_sum + sum(the_frame[i,c("n")])
-    
-    vObs <- append(vObs, current_sum)
-    vSppCd <- append(vSppCd, the_frame[i,1])
-    vDc <- append(vDc, the_frame[i,2])
-    vObsThis <- append(vObsThis, the_frame[i,3])
-    vObsPres <- append(vObsPres, the_frame[i,4])
-    
-    #debug code
-    #print(vObs)
-    #print(vSppCd)
-    
-    result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vDc)), max(unlist(vDc)), max(unlist(vObsPres)))
-    
-    #debug code
-    #print(result_frame)
-    #if(result_frame[1,3] == result_frame[1,4]){
-    #  print("true")
-    
-    #set the current row's max_dc to the next row's min_dc
-    if(!is.na(the_frame[i+1, 2]))
-    {
-      result_frame[1,4] = the_frame[i+1,2]
-    } else 
-    {
-      result_frame[1,4] = the_frame[i,2]
-    }
-    
-    #debug code
-    #print(result_frame)
-    
-    rows_to_add <- append(rows_to_add, result_frame)
-    i <- i + 1
-  }
-  
-  #debug code  
-  #print(result_frame)
-  
-  intermed_result_frame <- data.frame(result_frame[1,1], max(result_frame[5]), max(result_frame[2]), min(result_frame[3]), max(result_frame[4]))
-  
-  #debug code
-  #print(intermed_result_frame)
-  
-  result <- rbind(result, intermed_result_frame)
-}
-
-#If the last row is < the threshold, add it to the preceding row, and remove the last
-if(nrow(result) > 1 && result[nrow(result), 3] < threshold){
-  result[nrow(result)-1, 3] <- result[nrow(result)-1, 3] + result[nrow(result), 3]
-  result[nrow(result)-1, 5] <- result[nrow(result), 5]
-  result <- result %>% filter(!row_number() %in% nrow(result))
-}
-
-#Make things prettier
-colnames(result) <- c("species_cd", "pres", "obs", "min_dc", "max_dc")
-
-#Add a final midpoint column that is the mid between min_dc and max_dc
-result <-
-  result %>%
-  mutate(midpoint = (min_dc + max_dc)/2)
-
-#have to have at least 1 positive and 1 negative observation for logistic
-#iterate subsequent bins until true
-#function <- AdjustForLogistic(){
-
-#}
-
-
-
-result$species_cd = str_replace_all(result$species_cd, "__", " ")
-
-#debug code
-result[[2]][4]
-print(result[1])
-print(nrow(the_frame))
-print(the_frame$n)
-print(result)
-
-#cleanup stuff
-rm(ana_frame)
-rm(baseframe)
-rm(list_of_df)
-rm(list_of_df.balcapr)
-rm(something)
-ls()
-rm(list=ls())
-rm(the_frame)
-
-
-
+write.csv(the_frame, "../test_logit_data.csv")
