@@ -105,3 +105,12 @@ rm(the_frame)
 
 
 
+vCols <- c("pos_obs", "neg_obs")
+i <- 1
+vCols[i]
+vCols[vCols != vCols[i]]
+
+for(j in seq_along(vCols)){
+  print(j)
+  
+}
