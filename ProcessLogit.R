@@ -6,8 +6,7 @@ library(tidyverse)
 #baseframe <- read.csv("c:\\work\\R\\BinGenerator\\Data\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
 #mac
 logit_frame <- read.csv("../test_logit_data.csv", header = TRUE)
-logit_frame <- logit_frame[,-1]
-#result <- data.frame()
+
 #the two columns on which to operate
 #each one must be > 0 at the end of the day
 vCols <- c("pos_obs", "neg_obs")
@@ -27,7 +26,6 @@ for(j in seq_along(vCols)){
   while(i<=nrow(logit_frame)){
     #print(current_sum)
     while(current_sum < 1 && i<=nrow(logit_frame)){
-      #current_sum <- current_sum + sum(logit_frame[i, c("pos_obs")])
       current_sum <- current_sum + sum(logit_frame[i, vCols[j]])
       vSppCd <- append(vSppCd, logit_frame[i,c("species_cd")])
       vObs <- append(vObs, logit_frame[i,c("obs")])
@@ -40,7 +38,7 @@ for(j in seq_along(vCols)){
       i<-i+1    
       #print(paste("inner:", current_sum))
     }
-    print(intermed_result_frame)
+    #print(intermed_result_frame)
     #we can lose this if we change the group by columns
     colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
     result_frame <- intermed_result_frame %>% group_by(species_cd) %>% summarise(sum(obs), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
@@ -64,14 +62,12 @@ for(j in seq_along(vCols)){
   #print(vCols[j])
   #handle the last row case
   #print(result)
-  print(result[nrow(result), vCols[j]])
+  #print(result[nrow(result), vCols[j]])
   if(result[nrow(result), vCols[j]] == 0){
     print("in last row")
     result[nrow(result)-1, c("obs")] <- result[nrow(result)-1, c("obs")] + result[nrow(result), c("obs")]
     result[nrow(result)-1, c("max_dc")] <- result[nrow(result), c("max_dc")]
-    #result[nrow(result)-1, c("pos_obs")] <- result[nrow(result)-1, c("pos_obs")]
     result[nrow(result)-1, vCols[j]] <- result[nrow(result)-1, vCols[j]]
-    #result[nrow(result)-1, c("neg_obs")] <- result[nrow(result)-1, c("neg_obs")] + result[nrow(result), c("neg_obs")]
     result[nrow(result)-1, vCols[vCols != vCols[j]]] <- result[nrow(result)-1, vCols[vCols != vCols[j]]] + result[nrow(result), vCols[vCols != vCols[j]]]
     result <- result %>% filter(!row_number() %in% nrow(result))
   }
