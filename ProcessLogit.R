@@ -7,12 +7,13 @@ library(tidyverse)
 #mac
 logit_frame <- read.csv("../test_logit_data.csv", header = TRUE)
 logit_frame <- logit_frame[,-1]
-result <- data.frame()
+#result <- data.frame()
 #the two columns on which to operate
 #each one must be > 0 at the end of the day
 vCols <- c("pos_obs", "neg_obs")
 
 for(j in seq_along(vCols)){
+  result <- data.frame()
   i<-1
   current_sum <- 0
   vSppCd <- vector()
@@ -40,8 +41,10 @@ for(j in seq_along(vCols)){
       #print(paste("inner:", current_sum))
     }
     print(intermed_result_frame)
+    #we can lose this if we change the group by columns
+    colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
     result_frame <- intermed_result_frame %>% group_by(species_cd) %>% summarise(sum(obs), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
-    #colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
     
     result <- rbind(result, result_frame)
     #clear all the variables for next loop
@@ -61,8 +64,9 @@ for(j in seq_along(vCols)){
   #print(vCols[j])
   #handle the last row case
   #print(result)
-  #print(result[nrow(result), vCols[j]])
-  if(result[nrow(result), j] == 0){
+  print(result[nrow(result), vCols[j]])
+  if(result[nrow(result), vCols[j]] == 0){
+    print("in last row")
     result[nrow(result)-1, c("obs")] <- result[nrow(result)-1, c("obs")] + result[nrow(result), c("obs")]
     result[nrow(result)-1, c("max_dc")] <- result[nrow(result), c("max_dc")]
     #result[nrow(result)-1, c("pos_obs")] <- result[nrow(result)-1, c("pos_obs")]
