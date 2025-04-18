@@ -6,6 +6,7 @@ library(tidyverse)
 #baseframe <- read.csv("c:\\work\\R\\BinGenerator\\Data\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
 #mac
 logit_frame <- read.csv("../test_logit_data.csv", header = TRUE)
+logit_frame <- read.csv("../bal_capr_logit_test_data.csv", header=TRUE)
 
 #the two columns on which to operate
 #each one must be > 0 at the end of the day

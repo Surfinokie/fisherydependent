@@ -127,58 +127,115 @@ process_spp <- function(processing_frame, threshold){
   result
 }
 
-process_logit <- function(processing_frame){
+process_logit <- function(logit_frame){
     #go through result frame and add subsequent rows until pos_obs and neg_obs both >= 1
     #do pos_obs first
-    #print(processing_frame)
+  print(logit_frame)
+  vCols <<- c("pos_obs", "neg_obs")
   
-    if(nrow(processing_frame) > 1){
-      i <- 1
-      #print(i) 
-     #return(processing_frame)
-      #print(nrow(processing_frame))
-      while(i < nrow(processing_frame)){
-         current_sum <- 0
-         #i <- 1
-         vObs <- vector()
-         vPos <- vector()
-         vNeg <- vector()
-         vSppCd <- vector()
-         vMinDc <- vector()
-         vMaxDc <- vector()
-         #print(i)
-    # #     #print(current_sum)
-       while(current_sum < 1 && i <= nrow(processing_frame)){
-         current_sum <- current_sum + min(processing_frame[i,c("pos_obs")])
-    #       #print(current_sum + min(processing_frame[i,c("pos_obs")]))
-    #       print(paste("current_sum:", current_sum, " current_sum<1:", current_sum <1, " i:", i, " nrow:", nrow(processing_frame)))
-    #       #print(current_sum)
-    #       #print(str(current_sum))
-    #       #print(i)
-    # #       print (result[i,5])
-          #pos_sum <- pos_sum + sum(processing_frame[i, c("pres_true")])
-          #neg_sum <- neg_sum + sum(processing_frame[i, c("pres_false")])
-
-          vObs <- append(vObs, result[i, c("obs")])
-          vPos <- append(vPos, result[i, c("pos_obs")])
-          vNeg <- append(vNeg, result[i, c("neg_obs")])
-          vSppCd <- append(vSppCd, result[i,c("species_cd")])
-          vMinDc <- append(vMinDc, result[i,c("min_dc")])
-          vMaxDc <- append(vMaxDc, result[i, c("max_dc")])
-          
-          #result_frame <- data.frame(unlist(vSppCd), unlist(vObs), min(unlist(vMinDc)), max(unlist(vMaxDc)), sum(vPos), sum(vNeg))
-          i<-i+1
-          #print(paste("vObs:", vObs, "i:", i))
-          #print(result[i, c("obs")])
-       }
-         
-        #print(result_frame)
-       #i <- i + 1
+  for(j in seq_along(vCols)){
+    result <- data.frame()
+    sit<-1
+    current_sum <- 0
+    vSppCd <- vector()
+    vObs <- vector()
+    vMinDc <- vector()
+    vMaxDc <- vector()
+    vPosObs <- vector()
+    vNegObs <- vector()
+    intermed_result_frame <- data.frame(species_cd=character(), obs=numeric(), min_dc=numeric(), max_dc=numeric(), pos_obs=numeric(), neg_obs=numeric())
+    #colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    print("yeah")
+    #this loop takes care of everything except potentially the last row
+    while(sit<=nrow(logit_frame)){
+    #while(sit<8){
+      #print(current_sum)
+      while(current_sum < 1 && sit<=nrow(logit_frame)){
+        current_sum <- current_sum + sum(logit_frame[sit, vCols[j]])
+        vSppCd <- append(vSppCd, logit_frame[sit,c("species_cd")])
+        vObs <- append(vObs, logit_frame[sit,c("obs")])
+        vMinDc <- append(vMinDc, logit_frame[sit, c("min_dc")])
+        vMaxDc <- append(vMaxDc, logit_frame[sit, c("max_dc")])
+        vPosObs <- append(vPosObs, logit_frame[sit, c("pos_obs")])
+        vNegObs <- append(vNegObs, logit_frame[sit, c("neg_obs")])
+        
+        # print(paste("sum:", current_sum))
+        # print(vSppCd)
+        # print(vObs)
+        # print(vMinDc)
+        # print(vMaxDc)
+        # print(vPosObs)
+        # print(vNegObs)
+        #print(length(vObs))
+        #rbind here instead
+        #print(intermed_result_frame)
+        #print(data.frame(vSppCd, vObs, vMinDc, vMaxDc, vPosObs, vNegObs))
+        #tempdf <- data.frame(unlist(vSppCd), unlist(vObs), unlist(vMinDc), unlist(vMaxDc), unlist(vPosObs), unlist(vNegObs))
+        #intermed_result_frame <- rbind(intermed_result_frame, tempdf)
+        #print(str(intermed_result_frame))
+        #intermed_result_frame <- data.frame(vSppCd, vObs, vMinDc, vMaxDc, vPosObs, vNegObs)
+        #print(str(intermed_result_frame))
+        sit<-sit+1
+        #print(intermed_result_frame)
+        #print(paste("inner:", current_sum))
       }
-      #print(i)
+      # print(paste("sum:", current_sum))
+      # print(vSppCd)
+      # print(vObs)
+      # print(vMinDc)
+      # print(vMaxDc)
+      # print(vPosObs)
+      # print(vNegObs)
+      # print(length(current_sum))
+      # print(length(vSppCd))
+      # print(length(vObs))
+      # print(length(vMinDc))
+      # print(length(vMaxDc))
+      #print(intermed_result_frame)
+      #we can lose this if we change the group by columns
+      #colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+      tempdf <- data.frame(unlist(vSppCd), unlist(vObs), unlist(vMinDc), unlist(vMaxDc), unlist(vPosObs), unlist(vNegObs))
+      print(tempdf)
+      colnames(tempdf) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+      result_frame <- tempdf %>% group_by(species_cd) %>% summarise(sum(obs), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
+      colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+      #print(result_frame)
+      result <- rbind(result, result_frame)
+      #print(result)
+      #clear all the variables for next loop
+      intermed_result_frame <- intermed_result_frame[0,]
+      result_frame <- result_frame[0,]
+      tempdf <- tempdf[0,]
+      vSppCd <- vector()
+      vObs <- vector()
+      vMinDc <- vector()
+      vMaxDc <- vector()
+      vPosObs <- vector()
+      vNegObs <- vector()
+      current_sum <- 0
+      #print(sit)
     }
-    #do neg_obs
     
+    colnames(result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    #print(j)
+    #print(vCols[j])
+    #handle the last row case
+    #print(result)
+    #print(result[nrow(result), vCols[j]])
+    
+    #need a recursive call here
+    if(result[nrow(result), vCols[j]] == 0){
+      print("in last row")
+      result[nrow(result)-1, c("obs")] <- result[nrow(result)-1, c("obs")] + result[nrow(result), c("obs")]
+      result[nrow(result)-1, c("max_dc")] <- result[nrow(result), c("max_dc")]
+      result[nrow(result)-1, vCols[j]] <- result[nrow(result)-1, vCols[j]]
+      result[nrow(result)-1, vCols[vCols != vCols[j]]] <- result[nrow(result)-1, vCols[vCols != vCols[j]]] + result[nrow(result), vCols[vCols != vCols[j]]]
+      result <- result %>% filter(!row_number() %in% nrow(result))
+    }
+    logit_frame<-result
+  }  
+#print(logit_frame)
+  return(logit_frame)
 }
 
 #for each element in distinct_spp call the function that does all the work and add the result to the final result df
@@ -188,34 +245,36 @@ if(length(distinct_spp) > 0){
     #call the function
     the_frame <- spp_extractor(i)
     if(which(distinct_spp == i) > 1){
-      final_result <- union_all(final_result, process_spp(the_frame, 25))
+      final_result <- union_all(final_result, process_spp(the_frame, 40))
     }
     else {
-      final_result <- process_spp(the_frame, 25)
+      final_result <- process_spp(the_frame, 40)
     }
   }
   
   colnames(final_result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
-  
+  #print(str())
   logit <- TRUE
   #logistic portion
   #print(distinct_spp)
   if(logit == TRUE){
     if(length(distinct_spp > 0)){
-      for(i in distinct_spp){
-        #print(i)
-        the_frame <-  filter(final_result, species_cd == i)
+      for(s in distinct_spp){
+        #print(s)
+        #the_frame <-filter(final_result, species_cd == s)
+        the_frame <-filter(final_result, species_cd == "BAL__CAPR")
         as.data.frame(the_frame)
-        #print(the_frame)
-         if(which(distinct_spp == i) > 1){
+        #print(str(the_frame))
+         if(which(distinct_spp == s) > 1){
            print("here")
            #print(the_frame)
-           final_result <- union_all(final_result, process_logit(the_frame))
+           im_final_result <- process_logit(the_frame)
+           #final_result <- union_all(final_result, process_logit(the_frame))
         #
          } else {
            print("there")
            #print(the_frame)
-          final_result <- process_logit(the_frame)
+          #final_result <- process_logit(the_frame)
         }
       }
     }
@@ -229,4 +288,4 @@ if(length(distinct_spp) > 0){
 } #what to do if not true?
 
 
-write.csv(the_frame, "../test_logit_data.csv")
+write.csv(final_result, "../logit_test_data.csv")
