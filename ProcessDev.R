@@ -1,7 +1,7 @@
 #David Graham 3/26/25
 #R version 4.4.3
 #Tidyverse 2.0.0 (dplyr 1.1.4)
-#Go to line 
+#Go to line 194 for instructions on execution
 library(tidyverse)
 
 #get all rows with the species code and create a new summarised df on which to operate
