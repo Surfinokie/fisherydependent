@@ -1,35 +1,9 @@
 #David Graham 3/26/25
 #R version 4.4.3
 #Tidyverse 2.0.0 (dplyr 1.1.4)
+#Go to line 
 library(tidyverse)
 
-#Read in the data
-#windows
-#baseframe <- read.csv("c:\\work\\R\\BinGenerator\\Data\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
-#baseframe <- read.csv("D:\\work\\Analyses\\SAS_to_R\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
-#mac
-baseframe <- read.csv("../pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
-
-#create a new variable for depth category (DC) in a new dataframe
-#yeah, I know we don't need a new dataframe but I like to be able to debug easily
-ana_frame <-
-  baseframe %>%
-    mutate(dc = floor(DEPTH))
-
-#ana_frame <- ana_frame %>% mutate(species_cd = str_replace_all(species_cd, " ", "__"))
-
-#Create new, currently empty columns for the min, max, and midpoint depth categories
-ana_frame <- ana_frame %>%
-  add_column("dc_min"=0, "dc_max"=0, "dc_midpoint"=0)
-
-#vector of spp codes
-distinct_spp <- ana_frame %>% 
-                  distinct(species_cd) %>% 
-                    pull()
-
-result <- data.frame()
-final_result <- data.frame()
-the_frame <- data.frame()
 #get all rows with the species code and create a new summarised df on which to operate
 spp_extractor <- function(spp_code){
   filter(ana_frame, species_cd == spp_code) %>%
@@ -57,24 +31,24 @@ process_spp <- function(processing_frame, threshold){
     
     while (current_sum < threshold && i <= nrow(processing_frame)) {
       #does this have a first row error and always add the first row to the second?
-      current_sum <- current_sum + sum(processing_frame[i,c("n")])
+      current_sum <- current_sum + sum(processing_frame[i, c("n")])
       pos_sum <- pos_sum + sum(processing_frame[i, c("pres_true")])
       neg_sum <- neg_sum + sum(processing_frame[i, c("pres_false")])
       
       vObs <- append(vObs, current_sum)
       vPos <- append(vPos, pos_sum)
       vNeg <- append(vNeg, neg_sum)
-      vSppCd <- append(vSppCd, processing_frame[i,1])
-      vDc <- append(vDc, processing_frame[i,2])
+      vSppCd <- append(vSppCd, processing_frame[i, 1])
+      vDc <- append(vDc, processing_frame[i, 2])
       result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vDc)), max(unlist(vDc)), vPos, vNeg)
       
       #set the current row's max_dc to the next row's min_dc
       if(!is.na(processing_frame[i+1, 2]))
       {
-        result_frame[1,4] = processing_frame[i+1,2]
+        result_frame[1, 4] = processing_frame[i+1, 2]
       } else 
       {
-        result_frame[1,4] = processing_frame[i,2]
+        result_frame[1, 4] = processing_frame[i, 2]
       }
 
       rows_to_add <- append(rows_to_add, result_frame)
@@ -82,7 +56,8 @@ process_spp <- function(processing_frame, threshold){
     }
 
     colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
-    intermed_result_frame <- result_frame %>% group_by(species_cd) %>% 
+    intermed_result_frame <- result_frame %>% 
+                              group_by(species_cd) %>% 
                                 summarise(max(obs), 
                                           min(min_dc), 
                                           min(min_dc), 
@@ -145,9 +120,9 @@ process_logit <- function(logit_frame){
       result <- rbind(result, result_frame)
       
       #clear all the variables for next loop
-      intermed_result_frame <- intermed_result_frame[0,]
-      result_frame <- result_frame[0,]
-      tempdf <- tempdf[0,]
+      intermed_result_frame <- intermed_result_frame[0, ]
+      result_frame <- result_frame[0, ]
+      tempdf <- tempdf[0, ]
       vSppCd <- vector()
       vObs <- vector()
       vMinDc <- vector()
@@ -186,12 +161,10 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
   if(length(distinct_spp) > 0){
     for(i in distinct_spp){
       #i == the species_cd
-      #call the function
       the_frame <- spp_extractor(i)
       if(which(distinct_spp == i) > 1){
         final_result <- union_all(final_result, process_spp(the_frame, bin_size))
-      }
-      else {
+      } else {
         final_result <- process_spp(the_frame, bin_size)
       }
     }
@@ -204,7 +177,6 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
         for(s in distinct_spp){
           the_frame <-filter(final_result, species_cd == s)
           as.data.frame(the_frame)
-          
           ir <- union_all(ir, as.data.frame(process_logit(the_frame)))
         }
       }
@@ -212,13 +184,43 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
     }
     
     #Add a final midpoint column that is the mid between min_dc and max_dc
-    final_result <-
-      final_result %>%
-        mutate(midpoint = (min_dc + max_dc)/2)
+    final_result <- final_result %>%
+                      mutate(midpoint = (min_dc + max_dc)/2)
     
     return(final_result)
   } #what to do if not true?
 }
+
+####### How to run this#####
+# 1. Run or source all the preceding lines
+# 2. Run lines 204 - 222 to read in the data and prep the variables
+# 3. Generate the result data frame with one of the methods starting at line 226
+
+#variable set up and prep
+#Read in the data
+#windows
+#baseframe <- read.csv("D:\\work\\Analyses\\SAS_to_R\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
+#mac
+baseframe <- read.csv("../pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
+
+#create a new variable for depth category (DC) in a new dataframe
+#yeah, I know we don't need a new dataframe but I like to be able to debug easily
+ana_frame <-
+  baseframe %>%
+  mutate(dc = floor(DEPTH))
+
+#Create new, currently empty columns for the min, max, and midpoint depth categories
+ana_frame <- ana_frame %>%
+  add_column("dc_min"=0, "dc_max"=0, "dc_midpoint"=0)
+
+#vector of spp codes
+distinct_spp <- ana_frame %>% 
+  distinct(species_cd) %>% 
+  pull()
+
+result <- data.frame()
+final_result <- data.frame()
+the_frame <- data.frame()
 
 #different ways to run this
 #my_result <- generate_bins(25)
