@@ -1,8 +1,9 @@
 # TODO:
 
 1.  Need test files for edge cases
-2.  Add logistic logic
-3.  Convert to package
+2.  Convert to package
+3.  Merge ProcessDev.R and FinalResultGenerator.R logic to add new columns to original data and return that.
 
 # Questions
+
 -Should package prompt for result save info or just return data.frame?

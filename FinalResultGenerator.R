@@ -13,6 +13,8 @@ check <- left_join(baseframe, binresult_25, by)
 #the 40s
 final <- left_join(check, binresult_40, by)
 
+write.csv(final, "whateveryouwantthenametobe.csv")
+
 #the final dataframe, "final", will have new columns with .x and .y, the .x's are for the linear regression (25)
 #and the y's are for the logistic regression (40)
 
