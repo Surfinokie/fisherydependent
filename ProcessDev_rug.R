@@ -1,13 +1,14 @@
-#David Graham 3/26/25
+#David Graham 10/19/25
 #R version 4.4.3
 #Tidyverse 2.0.0 (dplyr 1.1.4)
+#Rugosity version
 #Go to line 194 for instructions on execution
 library(tidyverse)
 
 #get all rows with the species code and create a new summarised df on which to operate
 spp_extractor <- function(spp_code){
   filter(ana_frame, species_cd == spp_code) %>%
-            group_by(species_cd, dc) %>%
+            group_by(species_cd, rugcat) %>%
               summarise(n=n(), 
               obs=max(pres), 
               pres_true = sum(ifelse(pres==1, 1, 0)), 
@@ -27,7 +28,7 @@ process_spp <- function(processing_frame, threshold){
     vPos <- vector()
     vNeg <- vector()
     vSppCd <- vector()
-    vDc <- vector()
+    vRc <- vector()
     
     while (current_sum < threshold && i <= nrow(processing_frame)) {
       #does this have a first row error and always add the first row to the second?
@@ -39,8 +40,8 @@ process_spp <- function(processing_frame, threshold){
       vPos <- append(vPos, pos_sum)
       vNeg <- append(vNeg, neg_sum)
       vSppCd <- append(vSppCd, processing_frame[i, 1])
-      vDc <- append(vDc, processing_frame[i, 2])
-      result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vDc)), max(unlist(vDc)), vPos, vNeg)
+      vRc <- append(vRc, processing_frame[i, 2])
+      result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vRc)), max(unlist(vRc)), vPos, vNeg)
       
       #set the current row's max_dc to the next row's min_dc
       if(!is.na(processing_frame[i+1, 2]))
@@ -55,16 +56,16 @@ process_spp <- function(processing_frame, threshold){
       i <- i + 1
     }
 
-    colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    colnames(result_frame) <- c("species_cd", "obs", "min_rc", "max_rc", "pos_obs", "neg_obs")
     intermed_result_frame <- result_frame %>% 
                               group_by(species_cd) %>% 
                                 summarise(max(obs), 
-                                          min(min_dc), 
-                                          min(min_dc), 
-                                          max(max_dc), 
+                                          min(min_rc), 
+                                          min(min_rc), 
+                                          max(max_rc), 
                                           sum(pos_obs), 
                                           sum(neg_obs))
-    colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    colnames(intermed_result_frame) <- c("species_cd", "obs", "min_rc", "max_rc", "pos_obs", "neg_obs")
 
     result <- rbind(result, intermed_result_frame)
 
@@ -80,7 +81,13 @@ process_spp <- function(processing_frame, threshold){
     result <- result %>% filter(!row_number() %in% nrow(result))
   }
   
-  #print(result)
+  print(result)
+  
+  #make sure we have the minimum threshold values for rugosity categories
+  #2 is a magic number right now, turn it into a variable, and it is 2 because we're working with rc's multiplied by 100 at this point
+  result <- merge_rows_by_rugosity_threshold(result, "min_rc", "max_rc", 2)
+  
+  print(result)
   #return the result frame
   result
 }
@@ -156,6 +163,49 @@ process_logit <- function(logit_frame){
   return(logit_frame)
 }
 
+merge_rows_by_rugosity_threshold <- function(df, min_rc, max_rc, threshold){
+  #Ensure the input is a data.frame for base R indexing
+  df <- as.data.frame(df)
+  
+  #initialize the index for the current row we are checking
+  i <- 1
+  
+  #Loop until the index 'i' is at the last row
+  while (i < nrow(df)){
+    #calculate the absolute difference between the current row (i)
+    #and the next row (i+1) for the two specified columns
+    diff_val <- abs(df[i, max_rc] - df[i, min_rc])
+    
+    #check if the difference is less than the threshold
+    if(diff_val < threshold){
+      # ***** MERGE STEP *****
+      #1. Add/adjust the values of the next row (i+1) to the current row (i)
+      #species_cd = species_cd
+      #obs = obs[i] + obs[i+1]
+      #min_rc = min_rc[i]
+      #max_rc = max_rc[i+1]
+      #pos_obs = pos_obs[i] + pos_obs[i+1]
+      #neg_obs = neg_obs[i] + neg_obs[i+1]
+      df[i, max_rc] <- df[i+1, max_rc]
+      df[i, "pos_obs"] <- df[i, "pos_obs"] + df[i+1, "pos_obs"]
+      df[i, "neg_obs"] <- df[i, "neg_obs"] + df[i+1, "neg_obs"]
+      
+      #2. Remove the next row we just added to the first
+      df <- df[-(i + 1), ]
+      
+      # NOTE: We do NOT increment 'i' here because the *new* row 'i + 1' 
+      # (which was originally 'i + 2') now needs to be checked against the 
+      # row 'i' we just modified.
+      
+    } else {
+      
+      # The difference is >= thresh, so we keep both rows and move to the next row
+      i <- i + 1
+    }
+  }
+  return(df)
+}
+
 #for each element in distinct_spp call the function that does all the work and add the result to the final result df
 generate_bins <- function(bin_size = 25, logit = FALSE){
   if(length(distinct_spp) > 0){
@@ -185,8 +235,12 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
     
     #Add a final midpoint column that is the mid between min_dc and max_dc
     final_result <- final_result %>%
-                      mutate(midpoint = (min_dc + max_dc)/2)
+                      mutate(min_rc = ((min_rc)/100),
+                             max_rc = ((max_rc)/100),
+                             midpoint = (min_rc + max_rc)/2)
+                      #mutate(midpoint = (min_rc + max_rc)/2)
     
+    print(final_result)
     return(final_result)
   } #what to do if not true?
 }
@@ -201,17 +255,20 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
 #windows
 #baseframe <- read.csv("D:\\work\\Analyses\\SAS_to_R\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
 #mac
-baseframe <- read.csv("../pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
+#baseframe <- read.csv("../pr_usvi1623_fish17sppLH_ARdat2v2_rug_tst.csv", header = TRUE)
+baseframe <- read.csv("../rugosity/aca_coer_rug_tst.csv", header = TRUE)
 
 #create a new variable for depth category (DC) in a new dataframe
 #yeah, I know we don't need a new dataframe but I like to be able to debug easily
+#rugcat -> rugosity category, functinal equivalent to dc (depth category)
 ana_frame <-
   baseframe %>%
-  mutate(dc = floor(DEPTH))
+  mutate(rugcat = floor(AVG_HARD_RELIEF*100))
+  #mutate(dc = floor(DEPTH))
 
-#Create new, currently empty columns for the min, max, and midpoint depth categories
+#Create new, currently empty columns for the min, max, and midpoint rugosity categories
 ana_frame <- ana_frame %>%
-  add_column("dc_min"=0, "dc_max"=0, "dc_midpoint"=0)
+  add_column("rc_min"=0, "rc_max"=0, "rc_midpoint"=0)
 
 #vector of spp codes
 distinct_spp <- ana_frame %>% 
@@ -229,6 +286,6 @@ the_frame <- data.frame()
 #my_result <- generate_bins(bin_size = 25)
 #my_result <- generate_bins(bin_size = 40, logit=TRUE)
 
-my_result <- generate_bins(1500)
+my_result <- generate_bins(25)
 
-#write.csv(my_result, "../logit_test_data_40_1003.csv")
+write.csv(my_result, "../rugosity/first_test_aca_101925.csv")
