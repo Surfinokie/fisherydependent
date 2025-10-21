@@ -43,11 +43,11 @@ process_spp <- function(processing_frame, threshold){
       vRc <- append(vRc, processing_frame[i, 2])
       
       #debug code
-      print(paste("vObs: ", length(vObs)))
-      print(paste("vPos: ", length(vPos)))
-      print(paste("vNeg: ", length(vNeg)))
-      print(paste("vSppCd: ", length(vSppCd)))
-      print(paste("vRc: ", length(vRc)))
+      # print(paste("vObs: ", length(vObs)))
+      # print(paste("vPos: ", length(vPos)))
+      # print(paste("vNeg: ", length(vNeg)))
+      # print(paste("vSppCd: ", length(vSppCd)))
+      # print(paste("vRc: ", length(vRc)))
       
       #end debug
       
@@ -91,7 +91,7 @@ process_spp <- function(processing_frame, threshold){
     result <- result %>% filter(!row_number() %in% nrow(result))
   }
   
-  print(result)
+  #print(result)
   
   #make sure we have the minimum threshold values for rugosity categories
   #2 is a magic number right now, turn it into a variable, and it is 2 because we're working with rc's multiplied by 100 at this point
