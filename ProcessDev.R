@@ -229,4 +229,6 @@ the_frame <- data.frame()
 #my_result <- generate_bins(bin_size = 25)
 #my_result <- generate_bins(bin_size = 40, logit=TRUE)
 
-#write.csv(my_result, "../logit_test_data.csv")
+my_result <- generate_bins(1500)
+
+#write.csv(my_result, "../logit_test_data_40_1003.csv")

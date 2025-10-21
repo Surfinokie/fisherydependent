@@ -262,8 +262,8 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
 
 ####### How to run this#####
 # 1. Run or source all the preceding lines
-# 2. Run lines 204 - 222 to read in the data and prep the variables
-# 3. Generate the result data frame with one of the methods starting at line 226
+# 2. Run lines 268 - 296 to read in the data and prep the variables
+# 3. Generate the result data frame with one of the methods starting at line 298
 
 #variable set up and prep
 #Read in the data
