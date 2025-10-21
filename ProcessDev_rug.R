@@ -41,6 +41,16 @@ process_spp <- function(processing_frame, threshold){
       vNeg <- append(vNeg, neg_sum)
       vSppCd <- append(vSppCd, processing_frame[i, 1])
       vRc <- append(vRc, processing_frame[i, 2])
+      
+      #debug code
+      print(paste("vObs: ", length(vObs)))
+      print(paste("vPos: ", length(vPos)))
+      print(paste("vNeg: ", length(vNeg)))
+      print(paste("vSppCd: ", length(vSppCd)))
+      print(paste("vRc: ", length(vRc)))
+      
+      #end debug
+      
       result_frame <- data.frame(unlist(vSppCd), vObs, min(unlist(vRc)), max(unlist(vRc)), vPos, vNeg)
       
       #set the current row's max_dc to the next row's min_dc
@@ -87,7 +97,7 @@ process_spp <- function(processing_frame, threshold){
   #2 is a magic number right now, turn it into a variable, and it is 2 because we're working with rc's multiplied by 100 at this point
   result <- merge_rows_by_rugosity_threshold(result, "min_rc", "max_rc", 2)
   
-  print(result)
+  #print(result)
   #return the result frame
   result
 }
@@ -103,27 +113,27 @@ process_logit <- function(logit_frame){
     current_sum <- 0
     vSppCd <- vector()
     vObs <- vector()
-    vMinDc <- vector()
-    vMaxDc <- vector()
+    vMinRc <- vector()
+    vMaxRc <- vector()
     vPosObs <- vector()
     vNegObs <- vector()
-    intermed_result_frame <- data.frame(species_cd=character(), obs=numeric(), min_dc=numeric(), max_dc=numeric(), pos_obs=numeric(), neg_obs=numeric())
+    intermed_result_frame <- data.frame(species_cd=character(), obs=numeric(), min_rc=numeric(), max_rc=numeric(), pos_obs=numeric(), neg_obs=numeric())
     #this loop takes care of everything except potentially the last row
     while(sit<=nrow(logit_frame)){
       while(current_sum < 1 && sit<=nrow(logit_frame)){
         current_sum <- current_sum + sum(logit_frame[sit, vCols[j]])
         vSppCd <- append(vSppCd, logit_frame[sit,c("species_cd")])
         vObs <- append(vObs, logit_frame[sit,c("obs")])
-        vMinDc <- append(vMinDc, logit_frame[sit, c("min_dc")])
-        vMaxDc <- append(vMaxDc, logit_frame[sit, c("max_dc")])
+        vMinRc <- append(vMinRc, logit_frame[sit, c("min_rc")])
+        vMaxRc <- append(vMaxRc, logit_frame[sit, c("max_rc")])
         vPosObs <- append(vPosObs, logit_frame[sit, c("pos_obs")])
         vNegObs <- append(vNegObs, logit_frame[sit, c("neg_obs")])
         sit<-sit+1
       }
-      tempdf <- data.frame(unlist(vSppCd), unlist(vObs), unlist(vMinDc), unlist(vMaxDc), unlist(vPosObs), unlist(vNegObs))
-      colnames(tempdf) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
-      result_frame <- tempdf %>% group_by(species_cd) %>% summarise(sum(obs), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
-      colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+      tempdf <- data.frame(unlist(vSppCd), unlist(vObs), unlist(vMinRc), unlist(vMaxRc), unlist(vPosObs), unlist(vNegObs))
+      colnames(tempdf) <- c("species_cd", "obs", "min_rc", "max_rc", "pos_obs", "neg_obs")
+      result_frame <- tempdf %>% group_by(species_cd) %>% summarise(sum(obs), min(min_rc), max(max_rc), sum(pos_obs), sum(neg_obs))
+      colnames(result_frame) <- c("species_cd", "obs", "min_rc", "max_rc", "pos_obs", "neg_obs")
       result <- rbind(result, result_frame)
       
       #clear all the variables for next loop
@@ -132,18 +142,18 @@ process_logit <- function(logit_frame){
       tempdf <- tempdf[0, ]
       vSppCd <- vector()
       vObs <- vector()
-      vMinDc <- vector()
-      vMaxDc <- vector()
+      vMinRc <- vector()
+      vMaxRc <- vector()
       vPosObs <- vector()
       vNegObs <- vector()
       current_sum <- 0
     }
     
-    colnames(result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    colnames(result) <- c("species_cd", "obs", "min_rc", "max_rc", "pos_obs", "neg_obs")
     if(result[nrow(result), vCols[j]] == 0){
       logit_frame<-result
       result[nrow(result)-1, c("obs")] <- result[nrow(result)-1, c("obs")] + result[nrow(result), c("obs")]
-      result[nrow(result)-1, c("max_dc")] <- result[nrow(result), c("max_dc")]
+      result[nrow(result)-1, c("max_rc")] <- result[nrow(result), c("max_rc")]
       result[nrow(result)-1, vCols[j]] <- result[nrow(result)-1, vCols[j]]
       result[nrow(result)-1, vCols[vCols != vCols[j]]] <- result[nrow(result)-1, vCols[vCols != vCols[j]]] + result[nrow(result), vCols[vCols != vCols[j]]]
       result <- result %>% filter(!row_number() %in% nrow(result))
@@ -155,11 +165,16 @@ process_logit <- function(logit_frame){
   notcol <- vCols[!(vCols %in% vCols[j])]
   if((logit_frame[nrow(logit_frame), vCols[j]] == 0) || (logit_frame[nrow(logit_frame), vCols[!(vCols %in% vCols[j])]] == 0)){
     logit_frame[nrow(logit_frame)-1, c("obs")] <- logit_frame[nrow(logit_frame)-1, c("obs")] + logit_frame[nrow(logit_frame), c("obs")]
-    logit_frame[nrow(logit_frame)-1, c("max_dc")] <- logit_frame[nrow(logit_frame), c("max_dc")]
+    logit_frame[nrow(logit_frame)-1, c("max_rc")] <- logit_frame[nrow(logit_frame), c("max_rc")]
     logit_frame[nrow(logit_frame)-1, vCols[j]] <- logit_frame[nrow(logit_frame)-1, vCols[j]]
     logit_frame[nrow(logit_frame)-1, vCols[vCols != vCols[j]]] <- logit_frame[nrow(logit_frame)-1, vCols[vCols != vCols[j]]] + logit_frame[nrow(logit_frame), vCols[vCols != vCols[j]]]
     logit_frame <- logit_frame %>% filter(!row_number() %in% nrow(logit_frame))
   }
+  
+  #make sure we have the minimum threshold values for rugosity categories
+  #2 is a magic number right now, turn it into a variable, and it is 2 because we're working with rc's multiplied by 100 at this point
+  logit_frame <- merge_rows_by_rugosity_threshold(logit_frame, "min_rc", "max_rc", 2)
+  
   return(logit_frame)
 }
 
@@ -240,7 +255,7 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
                              midpoint = (min_rc + max_rc)/2)
                       #mutate(midpoint = (min_rc + max_rc)/2)
     
-    print(final_result)
+    #print(final_result)
     return(final_result)
   } #what to do if not true?
 }
@@ -256,7 +271,8 @@ generate_bins <- function(bin_size = 25, logit = FALSE){
 #baseframe <- read.csv("D:\\work\\Analyses\\SAS_to_R\\pr_usvi1623_fish18sppLH_depregdat.csv", header = TRUE)
 #mac
 #baseframe <- read.csv("../pr_usvi1623_fish17sppLH_ARdat2v2_rug_tst.csv", header = TRUE)
-baseframe <- read.csv("../rugosity/aca_coer_rug_tst.csv", header = TRUE)
+#baseframe <- read.csv("../rugosity/aca_coer_rug_tst.csv", header = TRUE)
+baseframe <- read.csv("../rugosity/pr_usvi1623_fish17sppLH_ARdat2v2_rug_tst.csv", header = TRUE)
 
 #create a new variable for depth category (DC) in a new dataframe
 #yeah, I know we don't need a new dataframe but I like to be able to debug easily
@@ -282,10 +298,10 @@ the_frame <- data.frame()
 #different ways to run this
 #my_result <- generate_bins(25)
 #my_result <- generate_bins(25, FALSE)
-#my_result <- generate_bins(40, TRUE)
+my_result <- generate_bins(40, TRUE)
 #my_result <- generate_bins(bin_size = 25)
 #my_result <- generate_bins(bin_size = 40, logit=TRUE)
 
-my_result <- generate_bins(25)
+#my_result <- generate_bins(25)
 
-write.csv(my_result, "../rugosity/first_test_aca_101925.csv")
+write.csv(my_result, "../rugosity/test_logistic_1_102025.csv")
