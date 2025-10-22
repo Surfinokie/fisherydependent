@@ -1,3 +1,6 @@
+#David Graham
+#10/21/25
+#Merges binning results from rugosity process to original dataset 
 library(tidyverse)
 
 baseframe <- read.csv("../rugosity/pr_usvi1623_fish17sppLH_ARdat2v2_rug_tst.csv", header = TRUE)
