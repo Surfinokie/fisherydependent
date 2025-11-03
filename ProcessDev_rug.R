@@ -304,4 +304,4 @@ my_result <- generate_bins(40, TRUE)
 
 #my_result <- generate_bins(25)
 
-write.csv(my_result, "../rugosity/test_logistic_1_102025.csv")
+write.csv(my_result, "../rugosity/rugosity_test_40.csv")
